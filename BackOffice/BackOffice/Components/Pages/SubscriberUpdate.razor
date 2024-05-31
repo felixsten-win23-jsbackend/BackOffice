@@ -1,0 +1,72 @@
+﻿@page "/update-subscriber/{id:int}"
+@using System.ComponentModel.DataAnnotations
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<h3>Update Subscriber</h3>
+
+<EditForm Model="model" OnValidSubmit="UpdateSubscriber" FormName="updatesubscriber">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="form-group">
+        <label for="email">Email:</label>
+        <InputText id="email" class="form-control" @bind-Value="model.Email" />
+    </div>
+    <button type="submit" class="btn btn-primary">Update</button>
+</EditForm>
+
+@code {
+    [Parameter] public int id { get; set; }
+
+    [SupplyParameterFromForm]
+    private SubscriberModel model { get; set; } = new();
+
+
+
+    private async Task UpdateSubscriber()
+    {
+        try
+        {
+            var jsonString = System.Text.Json.JsonSerializer.Serialize(model);
+            var content = new StringContent(jsonString, System.Text.Encoding.UTF8, "application/json");
+
+            Console.WriteLine($"Request Payload: {jsonString}");
+
+            var response = await Http.PutAsync($"https://subscriberprovider-jsbackend.azurewebsites.net/api/subscribers/{id}?code=6RbpdI9Mw96XxVLzUeqQgmCL7wMX-5GMzlSVzn3Gpn7eAzFuUBr_cA%3D%3D", content);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine($"Response Status: {response.StatusCode}");
+            Console.WriteLine($"Response Content: {responseContent}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                
+                NavigationManager.NavigateTo("/subscribers");
+
+                
+                var updatedResponse = await Http.GetFromJsonAsync<SubscriberModel>($"https://subscriberprovider-jsbackend.azurewebsites.net/api/subscribers/{id:int}?code=6RbpdI9Mw96XxVLzUeqQgmCL7wMX-5GMzlSVzn3Gpn7eAzFuUBr_cA%3D%3D");
+                if (updatedResponse != null)
+                {
+                    model = updatedResponse;
+                    Console.WriteLine($"Updated Model: {System.Text.Json.JsonSerializer.Serialize(model)}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"Error updating subscriber: {response.StatusCode}, {responseContent}");
+                
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating subscriber: {ex.Message}");
+        }
+    }
+
+    public class SubscriberModel
+    {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        public string Email { get; set; }
+    }
+}

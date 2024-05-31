@@ -1,0 +1,60 @@
+﻿@page "/delete-subscriber"
+@using System.ComponentModel.DataAnnotations
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<h3>Delete Subscriber</h3>
+
+<EditForm Model="model" OnValidSubmit="DeleteSubscriber" FormName="deletesubscriber">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="email">Enter Email of subscriber to Delete:</label>
+        <InputText id="email" class="form-control" @bind-Value="model.Email" />
+    </div>
+    <button type="submit" class="btn btn-danger">Delete</button>
+</EditForm>
+
+
+@code {
+
+    [SupplyParameterFromForm]
+    private DeleteSubscriberModel model { get; set; } = new();
+
+    private async Task DeleteSubscriber()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(model.Email))
+            {
+                Console.WriteLine("Email is required");
+                return;
+            }
+
+            var response = await Http.DeleteAsync($"https://subscriberprovider-jsbackend.azurewebsites.net/api/subscribers/{model.Email}?code=6RbpdI9Mw96XxVLzUeqQgmCL7wMX-5GMzlSVzn3Gpn7eAzFuUBr_cA%3D%3D");
+            if (response.IsSuccessStatusCode)
+            {
+                Console.WriteLine("Subscriber deleted successfully");
+                NavigationManager.NavigateTo("/subscribers");
+            }
+            else
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error deleting subscriber: {response.StatusCode}, {responseContent}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting subscriber: {ex.Message}");
+        }
+    }
+
+    public class DeleteSubscriberModel
+    {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        public string Email { get; set; }
+    }
+
+}

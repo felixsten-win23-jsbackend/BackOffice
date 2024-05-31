@@ -1,0 +1,63 @@
+﻿@page "/deleteadmin/{adminId}"
+
+@using BackOffice.Data
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.ComponentModel.DataAnnotations
+
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h3>Delete Admin</h3>
+
+<EditForm Model="model" OnValidSubmit="DeleteAdmin" FormName="deleteadmin">
+    <div class="form-group">
+        <label for="email">Enter Email of Admin to Delete:</label>
+        <InputText id="email" class="form-control" @bind-Value="model.Email" />
+    </div>
+    <button type="submit" class="btn btn-danger">Delete</button>
+</EditForm>
+
+@code {
+    [Parameter] public string AdminId { get; set; }
+
+
+    [SupplyParameterFromForm]
+    private DeleteAdminModel model { get; set; } = new();
+
+    private async Task DeleteAdmin()
+    {
+        var user = await UserManager.FindByEmailAsync(model.Email);
+        if (user != null)
+        {
+            var result = await UserManager.DeleteAsync(user);
+            if (result.Succeeded)
+            {
+                // Log or display success message
+                Console.WriteLine("Admin deleted successfully");
+                NavigationManager.NavigateTo("/admins");
+            }
+            else
+            {
+                // Log or display errors
+                foreach (var error in result.Errors)
+                {
+                    Console.WriteLine($"Error: {error.Code}, Description: {error.Description}");
+                }
+            }
+        }
+        else
+        {
+            // Log or display message if admin with the provided email does not exist
+            Console.WriteLine("Admin not found");
+        }
+    }
+
+    public class DeleteAdminModel
+    {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        public string Email { get; set; }
+    }
+}

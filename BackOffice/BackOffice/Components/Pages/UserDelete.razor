@@ -1,0 +1,68 @@
+﻿@page "/deleteuser/{email}"
+
+@using BackOffice.Data
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.ComponentModel.DataAnnotations
+
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<h3>Delete Admin</h3>
+
+<EditForm Model="model" OnValidSubmit="DeleteUser" FormName="deleteuser">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="email">Enter Email of User to Delete:</label>
+        <InputText id="email" class="form-control" @bind-Value="model.Email" />
+    </div>
+    <button type="submit" class="btn btn-danger">Delete</button>
+</EditForm>
+
+
+@code {
+    [Parameter] public string Email { get; set; }
+
+
+    [SupplyParameterFromForm]
+    private DeleteUserModel model { get; set; } = new();
+
+    private async Task DeleteUser()
+    {
+        try
+        {
+            
+            if (string.IsNullOrEmpty(model.Email))
+            {
+                Console.WriteLine("Email is required");
+                return;
+            }
+
+            var response = await Http.DeleteAsync($"https://userprovider-jsbackend.azurewebsites.net/api/users/{model.Email}?code=75be1wwodJCxICSe8IkT-AJkk2re3N7qbtngBxBX4wnAAzFuvFPODg%3D%3D");
+            if (response.IsSuccessStatusCode)
+            {
+                Console.WriteLine("User deleted successfully");
+                NavigationManager.NavigateTo("/users");
+            }
+            else
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error deleting user: {response.StatusCode}, {responseContent}");
+                
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting user: {ex.Message}");
+        }
+    }
+
+    public class DeleteUserModel
+    {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        public string Email { get; set; }
+    }
+}

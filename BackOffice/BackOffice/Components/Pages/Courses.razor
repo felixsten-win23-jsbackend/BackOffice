@@ -1,0 +1,106 @@
+﻿@page "/courses"
+@using System.Text.Json
+@inject HttpClient Http
+@attribute [StreamRendering]
+
+<h3>Courses</h3>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (courses == null)
+        {
+            <tr>
+                <td colspan="2"><em>Loading...</em></td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var course in courses)
+            {
+                <tr>
+                    <td>@course.Title</td>
+                    <td>
+                        <a href="/courseupdate/@course.Id" class="btn btn-primary">Edit</a>
+                        <a href="/coursedelete/@course.Id" class="btn btn-danger">Delete</a>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+<a href="/coursecreate" class="btn btn-success">Create New Course</a>
+
+@code {
+    private List<Course> courses;
+
+    protected override async Task OnInitializedAsync()
+    {
+        courses = await GetCourses();
+    }
+
+    private async Task<List<Course>> GetCourses()
+    {
+        var request = new GraphQLRequest
+            {
+                Query = @"
+            query {
+                getCourses {
+                    id
+                    title
+                }
+            }"
+            };
+
+        var response = await Http.PostAsJsonAsync("https://courseprovider-jsbackend.azurewebsites.net/api/graphql?", request);
+        var responseContent = await response.Content.ReadAsStringAsync();
+
+        // Log the response content for debugging
+        Console.WriteLine(responseContent);
+
+        try
+        {
+            var data = JsonSerializer.Deserialize<GraphQLResponse<CourseListResponse>>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // Handle null or unexpected responses
+            if (data?.Data?.GetCourses == null)
+            {
+                Console.WriteLine("No courses found or error in deserialization");
+                return new List<Course>();
+            }
+
+            return data.Data.GetCourses;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Deserialization error: {ex.Message}");
+            return new List<Course>();
+        }
+    }
+
+    public class Course
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+    }
+
+    public class CourseListResponse
+    {
+        public List<Course> GetCourses { get; set; }
+    }
+
+    public class GraphQLRequest
+    {
+        public string Query { get; set; }
+    }
+
+    public class GraphQLResponse<T>
+    {
+        public T Data { get; set; }
+    }
+}

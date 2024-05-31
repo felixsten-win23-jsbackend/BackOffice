@@ -1,0 +1,85 @@
+﻿@page "/editadmin/{adminId}"
+@using BackOffice.Data
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Mvc
+@using System.ComponentModel.DataAnnotations
+@attribute [StreamRendering]
+
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h3>Update Admin</h3>
+
+<EditForm Model="model" OnValidSubmit="UpdateAdmin" FormName="editadmin">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="email">Email:</label>
+        <InputText id="email" class="form-control" @bind-Value="model.Email" />
+        <ValidationMessage For="@(() => model.Email)" />
+    </div>
+    <button type="submit" class="btn btn-primary">Update</button>
+</EditForm>
+
+@code {
+    [Parameter] public string AdminId { get; set; }
+
+    [SupplyParameterFromForm]
+    private EditAdminModel model { get; set; } = new();
+
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await UserManager.FindByIdAsync(AdminId);
+        if (user != null)
+        {
+            user.Email = model.Email;
+        }
+        isLoading = false;
+    }
+
+    private async Task UpdateAdmin()
+    {
+        Console.WriteLine($"Updating admin with email: {model.Email}");
+
+        var user = await UserManager.FindByIdAsync(AdminId);
+        if (user != null)
+        {
+            var originalEmail = user.Email;
+            user.Email = model.Email;
+            user.UserName = model.Email;
+
+            var result = await UserManager.UpdateAsync(user);
+            if (result.Succeeded)
+            {
+                // Log or display success message
+                Console.WriteLine("Admin email updated successfully");
+                NavigationManager.NavigateTo("/admins");
+            }
+            else
+            {
+                // Log or display errors
+                foreach (var error in result.Errors)
+                {
+                    Console.WriteLine($"Error: {error.Code}, Description: {error.Description}");
+                }
+            }
+        }
+        else
+        {
+            // Log or handle case where user is not found
+            Console.WriteLine("User not found");
+        }
+    }
+
+    public class EditAdminModel
+    {
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        public string Email { get; set; }
+    }
+}

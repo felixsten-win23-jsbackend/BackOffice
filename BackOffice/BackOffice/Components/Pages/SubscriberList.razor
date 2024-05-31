@@ -1,0 +1,55 @@
+﻿@page "/subscribers"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@attribute [StreamRendering]
+
+<PageTitle>Users</PageTitle>
+
+<h3>Subscriber List</h3>
+
+@if (subscribers == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var subscriber in subscribers)
+            {
+                <tr>
+                    <td>@subscriber.Id</td>
+                    <td>@subscriber.Email</td>
+                    <td>
+                        <NavLink href="@($"/update-subscriber/{subscriber.Id}")"><span>Edit </span></NavLink>
+                        <NavLink href="@($"/delete-subscriber")"><span>Delete </span></NavLink>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<SubscriberEntity> subscribers;
+
+    protected override async Task OnInitializedAsync()
+    {
+        subscribers = await Http.GetFromJsonAsync<List<SubscriberEntity>>("https://subscriberprovider-jsbackend.azurewebsites.net/api/GetSubscribers?code=6RbpdI9Mw96XxVLzUeqQgmCL7wMX-5GMzlSVzn3Gpn7eAzFuUBr_cA%3D%3D");
+    }
+
+
+
+    public class SubscriberEntity
+    {
+        public int Id { get; set; }
+        public string Email { get; set; }
+    }
+}

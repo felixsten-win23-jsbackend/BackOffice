@@ -1,0 +1,70 @@
+﻿@page "/admins"
+@using BackOffice.Data
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [StreamRendering]
+
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Admin Management</PageTitle>
+
+<h3>Admin Management</h3>
+
+@if (!isAdmin)
+{
+    <p>You do not have access to this page.</p>
+}
+else
+{
+    <NavLink href="/createadmin"><span>Create admin</span></NavLink>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var admin in admins)
+            {
+                <tr>
+                    <td>@admin.Email</td>
+                    <td>
+                        <NavLink href="@($"/editadmin/{admin.Id}")"><span>Edit </span></NavLink>
+                        <NavLink href="@($"/deleteadmin/{admin.Id}")"><span>Delete </span></NavLink>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<ApplicationUser> admins = new();
+    private bool isAdmin = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity!.IsAuthenticated)
+        {
+            var currentUser = await UserManager.GetUserAsync(user);
+            isAdmin = await UserManager.IsInRoleAsync(currentUser!, "Admin");
+
+            if (isAdmin)
+            {
+                admins = (await UserManager.GetUsersInRoleAsync("Admin")).ToList();
+            }
+        }
+    }
+
+   
+
+ 
+}

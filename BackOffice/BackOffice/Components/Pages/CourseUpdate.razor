@@ -1,0 +1,202 @@
+﻿@page "/courseupdate/{id}"
+@using System.Text.Json
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+
+<h3>Update Course</h3>
+
+<EditForm Model="course" OnValidSubmit="UpdateCourse" FormName="courseupdate">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label for="title">Title</label>
+        <InputText id="title" class="form-control" @bind-Value="course.Title" />
+    </div>
+
+    <div class="form-group">
+        <label for="ingress">Ingress</label>
+        <InputText id="ingress" class="form-control" @bind-Value="course.Ingress" />
+    </div>
+
+    <div class="form-group">
+        <label for="isBestseller">Is Bestseller</label>
+        <InputCheckbox id="isBestseller" class="form-control" @bind-Value="course.IsBestseller" />
+    </div>
+
+    <div class="form-group">
+        <label for="imageUri">Image URI</label>
+        <InputText id="imageUri" class="form-control" @bind-Value="course.ImageUri" />
+    </div>
+
+    <div class="form-group">
+        <label for="isDigital">Is Digital</label>
+        <InputCheckbox id="isDigital" class="form-control" @bind-Value="course.IsDigital" />
+    </div>
+
+    <div class="form-group">
+        <label for="categories">Categories (comma-separated)</label>
+        <InputText id="categories" class="form-control" @bind-Value="categoriesString" />
+    </div>
+
+    <div class="form-group">
+        <label for="authors">Authors (comma-separated)</label>
+        <InputText id="authors" class="form-control" @bind-Value="authorsString" />
+    </div>
+
+    <div class="form-group">
+        <label for="starRating">Star Rating</label>
+        <InputNumber id="starRating" class="form-control" @bind-Value="course.StarRating" />
+    </div>
+
+    <div class="form-group">
+        <label for="reviews">Reviews</label>
+        <InputText id="reviews" class="form-control" @bind-Value="course.Reviews" />
+    </div>
+
+    <div class="form-group">
+        <label for="likesInProcent">Likes in Procent</label>
+        <InputText id="likesInProcent" class="form-control" @bind-Value="course.LikesInProcent" />
+    </div>
+
+    <div class="form-group">
+        <label for="likes">Likes</label>
+        <InputText id="likes" class="form-control" @bind-Value="course.Likes" />
+    </div>
+
+    <div class="form-group">
+        <label for="hours">Hours</label>
+        <InputText id="hours" class="form-control" @bind-Value="course.Hours" />
+    </div>
+
+    
+    <div class="form-group">
+        <label for="currency">Currency</label>
+        <InputText id="currency" class="form-control" @bind-Value="course.Prices.Currency" />
+    </div>
+    <div class="form-group">
+        <label for="price">Price</label>
+        <InputNumber id="price" class="form-control" @bind-Value="course.Prices.Price" />
+    </div>
+    <div class="form-group">
+        <label for="discount">Discount</label>
+        <InputNumber id="discount" class="form-control" @bind-Value="course.Prices.Discount" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Update</button>
+</EditForm>
+
+@code {
+    [Parameter] public string Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private CourseUpdateRequestInput course { get; set; } = new();
+
+    private string categoriesString = string.Empty;
+    private string authorsString = string.Empty;
+    private string includesString = string.Empty;
+
+    private ContentModel content = new();
+    private ProgramDetailModel programDetail = new();
+
+    protected override void OnInitialized()
+    {
+        course.Prices = new PriceUpdateRequestInput();
+        course.Content = new ContentModel();
+    }
+
+    private async Task UpdateCourse()
+    {
+        course.Id = Id;
+        course.Categories = categoriesString.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(c => c.Trim()).ToArray();
+        course.Authors = authorsString.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(a => a.Trim()).ToArray();
+        content.Includes = includesString.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(i => i.Trim()).ToArray();
+        content.ProgramDetails = new[] { programDetail };
+        course.Content = content;
+
+        var request = new GraphQLRequest
+            {
+                Query = @"
+            mutation ($input: CourseUpdateRequestInput!) {
+                updateCourse(input: $input) {
+                    id
+                }
+            }",
+                Variables = new { input = course }
+            };
+
+        var response = await Http.PostAsJsonAsync("https://courseprovider-jsbackend.azurewebsites.net/api/graphql?", request);
+        var responseContent = await response.Content.ReadAsStringAsync();
+        Console.WriteLine(responseContent);
+
+        if (response.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/courses");
+        }
+        else
+        {
+            Console.WriteLine($"HTTP error: {response.StatusCode}");
+        }
+    }
+
+    public class CourseUpdateRequestInput
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+        public string Ingress { get; set; }
+        public bool IsBestseller { get; set; }
+        public string ImageUri { get; set; }
+        public bool IsDigital { get; set; }
+        public string[] Categories { get; set; }
+        public string[] Authors { get; set; }
+        public double StarRating { get; set; }
+        public string Reviews { get; set; }
+        public string LikesInProcent { get; set; }
+        public string Likes { get; set; }
+        public string Hours { get; set; }
+        public PriceUpdateRequestInput Prices { get; set; }
+        public ContentModel Content { get; set; }
+    }
+
+    public class Author
+    {
+        public string Name { get; set; }
+    }
+
+    public class ContentModel
+    {
+        public string Description { get; set; }
+        public string[] Includes { get; set; }
+        public ProgramDetailModel[] ProgramDetails { get; set; }
+    }
+
+    public class ProgramDetailModel
+    {
+        public int Id { get; set; }
+        public string Title { get; set; }
+        public string Description { get; set; }
+    }
+
+    public class PriceUpdateRequestInput
+    {
+        public string Currency { get; set; }
+        public double Price { get; set; }
+        public double Discount { get; set; }
+    }
+
+    public class GraphQLRequest
+    {
+        public string Query { get; set; }
+        public object Variables { get; set; }
+    }
+
+    public class GraphQLResponse<T>
+    {
+        public T Data { get; set; }
+    }
+
+    public class CourseUpdateResponse
+    {
+        public CourseUpdateRequestInput Course { get; set; }
+    }
+}
